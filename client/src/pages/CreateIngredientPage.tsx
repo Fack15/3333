@@ -3,6 +3,7 @@ import IngredientForm from '@/components/forms/IngredientForm';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import type { InsertIngredient, Ingredient } from '@shared/schema';
 
 export default function CreateIngredientPage() {
   const [, setLocation] = useLocation();
@@ -10,8 +11,12 @@ export default function CreateIngredientPage() {
   const queryClient = useQueryClient();
 
   const createIngredientMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/ingredients', { method: 'POST', data }),
-    onSuccess: (newIngredient) => {
+    mutationFn: (data: InsertIngredient) => {
+      console.log('Submitting ingredient data:', JSON.stringify(data, null, 2));
+      return apiRequest('/api/ingredients', { method: 'POST', data });
+    },
+    onSuccess: (newIngredient: Ingredient) => {
+      console.log('Successfully created ingredient:', JSON.stringify(newIngredient, null, 2));
       queryClient.invalidateQueries({ queryKey: ['/api/ingredients'] });
       toast({
         title: "Ingredient created successfully!",
@@ -19,16 +24,17 @@ export default function CreateIngredientPage() {
       });
       setLocation('/ingredients');
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Error creating ingredient:', error);
       toast({
         title: "Error creating ingredient",
-        description: "Please try again.",
+        description: error?.details?.message || error?.message || "Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: InsertIngredient) => {
     createIngredientMutation.mutate(data);
   };
 

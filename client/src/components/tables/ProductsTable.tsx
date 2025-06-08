@@ -56,10 +56,10 @@ export default function ProductsTable({ products, onEdit, onDelete, onDuplicate,
               <TableCell className="px-6 py-4">
                 <div className="font-medium text-gray-900">{product.name}</div>
               </TableCell>
-              <TableCell className="px-6 py-4 text-gray-600">{product.netVolume || '-'}</TableCell>
+              <TableCell className="px-6 py-4 text-gray-600">{product.net_volume || '-'}</TableCell>
               <TableCell className="px-6 py-4 text-gray-600">{product.vintage || '-'}</TableCell>
-              <TableCell className="px-6 py-4 text-gray-600">{product.wineType || '-'}</TableCell>
-              <TableCell className="px-6 py-4 text-gray-600">{product.sugarContent || '-'}</TableCell>
+              <TableCell className="px-6 py-4 text-gray-600">{product.wine_type || '-'}</TableCell>
+              <TableCell className="px-6 py-4 text-gray-600">{product.sugar_content || '-'}</TableCell>
               <TableCell className="px-6 py-4 text-gray-600">{product.appellation || '-'}</TableCell>
               <TableCell className="px-6 py-4 text-gray-600">{product.sku || '-'}</TableCell>
               <TableCell className="px-6 py-4">

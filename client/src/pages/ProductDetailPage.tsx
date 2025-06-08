@@ -82,7 +82,8 @@ export default function ProductDetailPage() {
       });
       
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
       }
       
       return response.json();
@@ -94,10 +95,10 @@ export default function ProductDetailPage() {
         description: "Product image has been uploaded successfully",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to upload image",
+        description: error.message || "Failed to upload image",
         variant: "destructive",
       });
     },
@@ -144,8 +145,8 @@ export default function ProductDetailPage() {
   };
 
   const generateQRCode = () => {
-    if (product?.externalLink) {
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(product.externalLink)}`;
+    if (product?.external_link) {
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(product.external_link)}`;
       const link = document.createElement('a');
       link.href = qrCodeUrl;
       link.download = `${product.name}-qr-code.png`;
@@ -282,7 +283,7 @@ export default function ProductDetailPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Net Volume</label>
-                  <p className="text-gray-900">{product.netVolume || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.net_volume || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Vintage</label>
@@ -290,11 +291,11 @@ export default function ProductDetailPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Wine Type</label>
-                  <p className="text-gray-900">{product.wineType || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.wine_type || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sugar Content</label>
-                  <p className="text-gray-900">{product.sugarContent || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.sugar_content || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Appellation</label>
@@ -302,11 +303,11 @@ export default function ProductDetailPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Alcohol Content</label>
-                  <p className="text-gray-900">{product.alcoholContent || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.alcohol_content || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Country of Origin</label>
-                  <p className="text-gray-900">{product.countryOfOrigin || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.country_of_origin || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
@@ -318,7 +319,7 @@ export default function ProductDetailPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Packaging Gases</label>
-                  <p className="text-gray-900">{product.packagingGases || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.packaging_gases || 'Not specified'}</p>
                 </div>
               </div>
             </CardContent>
@@ -394,7 +395,7 @@ export default function ProductDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Portion Size</label>
-                  <p className="text-gray-900">{product.portionSize || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.portion_size || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Energy (kcal)</label>
@@ -446,19 +447,19 @@ export default function ProductDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Operator Type</label>
-                  <p className="text-gray-900">{product.operatorType || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.operator_type || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Operator Name</label>
-                  <p className="text-gray-900">{product.operatorName || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.operator_name || 'Not specified'}</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <p className="text-gray-900">{product.operatorAddress || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.operator_address || 'Not specified'}</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Additional Information</label>
-                  <p className="text-gray-900">{product.operatorInfo || 'Not specified'}</p>
+                  <p className="text-gray-900">{product.operator_info || 'Not specified'}</p>
                 </div>
               </div>
             </CardContent>
@@ -475,9 +476,9 @@ export default function ProductDetailPage() {
               <div className="space-y-6">
                 {/* QR Code Display */}
                 <div className="text-center">
-                  {product.externalLink ? (
+                  {product.external_link ? (
                     <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(product.externalLink)}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(product.external_link)}`}
                       alt="QR Code for product" 
                       className="w-48 h-48 mx-auto border rounded-lg" 
                     />
@@ -493,7 +494,7 @@ export default function ProductDetailPage() {
 
                 {/* Download QR Code */}
                 <div className="text-center">
-                  <Button onClick={generateQRCode} variant="outline" disabled={!product.externalLink}>
+                  <Button onClick={generateQRCode} variant="outline" disabled={!product.external_link}>
                     <Download className="w-4 h-4 mr-2" />
                     Download QR Code
                   </Button>
@@ -504,15 +505,15 @@ export default function ProductDetailPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">External Link</label>
                   <div className="flex items-center space-x-2">
                     <Input 
-                      value={product.externalLink || 'No external link specified'} 
+                      value={product.external_link || 'No external link specified'} 
                       readOnly 
                       className="flex-1 text-sm bg-gray-50"
                     />
-                    {product.externalLink && (
+                    {product.external_link && (
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => handleCopyLink(product.externalLink!)}
+                        onClick={() => handleCopyLink(product.external_link!)}
                       >
                         <Copy className="w-4 h-4" />
                       </Button>

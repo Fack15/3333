@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,13 +25,7 @@ interface IngredientFormProps {
 export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoading = false }: IngredientFormProps) {
   const form = useForm<IngredientFormData>({
     resolver: zodResolver(insertIngredientSchema),
-    defaultValues: ingredient ? {
-      name: ingredient.name,
-      category: ingredient.category || '',
-      e_number: ingredient.e_number || '',
-      details: ingredient.details || '',
-      allergens: ingredient.allergens || [],
-    } : {
+    defaultValues: {
       name: '',
       category: '',
       e_number: '',
@@ -39,20 +34,53 @@ export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoadi
     },
   });
 
-  const allergens = form.watch('allergens');
+  // Update form values when ingredient data changes
+  useEffect(() => {
+    if (ingredient) {
+      form.reset({
+        name: ingredient.name,
+        category: ingredient.category || '',
+        e_number: ingredient.e_number || '',
+        details: ingredient.details || '',
+        allergens: ingredient.allergens || [],
+      });
+    }
+  }, [ingredient, form]);
+
+  const handleFormSubmit = async (data: IngredientFormData) => {
+    try {
+      // Transform empty strings to null and ensure allergens is an array
+      const transformedData = {
+        name: data.name.trim(),
+        category: data.category?.trim() || null,
+        e_number: data.e_number?.trim() || null,
+        details: data.details?.trim() || null,
+        allergens: Array.isArray(data.allergens) ? data.allergens.map(a => a.trim()) : [],
+      };
+
+      // Log the data being submitted
+      console.log('Form data before transformation:', data);
+      console.log('Transformed data:', transformedData);
+
+      await onSubmit(transformedData);
+    } catch (error) {
+      console.error('Error in form submission:', error);
+      throw error; // Let the parent component handle the error
+    }
+  };
 
   const handleAllergenChange = (allergen: string, checked: boolean) => {
-    if (checked) {
-      form.setValue('allergens', [...allergens, allergen]);
-    } else {
-      form.setValue('allergens', allergens.filter(a => a !== allergen));
-    }
+    const currentAllergens = form.getValues('allergens') || [];
+    const newAllergens = checked
+      ? [...new Set([...currentAllergens, allergen])]
+      : currentAllergens.filter(a => a !== allergen);
+    
+    form.setValue('allergens', newAllergens, { shouldValidate: true });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Ingredient Information */}
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>Ingredient Information</CardTitle>
@@ -78,7 +106,10 @@ export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoadi
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ''}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
@@ -108,10 +139,6 @@ export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoadi
                       {...field} 
                       placeholder="e.g. E220" 
                       value={field.value || ''}
-                      onChange={(e) => {
-                        const value = e.target.value.trim();
-                        field.onChange(value || null);
-                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -126,7 +153,12 @@ export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoadi
                 <FormItem>
                   <FormLabel>Other Ingredient Details</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Additional details about the ingredient..." className="h-24" />
+                    <Textarea 
+                      {...field} 
+                      placeholder="Additional details about the ingredient..." 
+                      className="h-24"
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -135,7 +167,6 @@ export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoadi
           </CardContent>
         </Card>
 
-        {/* Allergens */}
         <Card>
           <CardHeader>
             <CardTitle>Allergens</CardTitle>
@@ -146,7 +177,7 @@ export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoadi
                 <div key={allergen} className="flex items-center space-x-2">
                   <Checkbox
                     id={allergen}
-                    checked={allergens.includes(allergen)}
+                    checked={form.watch('allergens')?.includes(allergen) || false}
                     onCheckedChange={(checked) => handleAllergenChange(allergen, checked as boolean)}
                   />
                   <label
@@ -161,16 +192,24 @@ export default function IngredientForm({ ingredient, onSubmit, onCancel, isLoadi
           </CardContent>
         </Card>
 
-        {/* Form Actions */}
         <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel} 
+            disabled={isLoading}
+          >
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading} className="bg-accent hover:bg-accent/90">
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            className="bg-accent hover:bg-accent/90"
+          >
             {isLoading ? 'Saving...' : ingredient ? 'Update Ingredient' : 'Save Ingredient'}
           </Button>
         </div>
       </form>
     </Form>
   );
-}
+} 
