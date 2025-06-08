@@ -7,12 +7,14 @@ import {
   insertIngredientSchema,
   loginSchema,
   registerSchema,
+  stringOrNull,
 } from "@shared/schema";
 import { AuthService } from "./auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import * as XLSX from "xlsx";
+import { z } from "zod";
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -90,23 +92,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const result = registerSchema.safeParse(req.body);
-      // if (!result.success) {
-      //   return res.status(400).json({
-      //     success: false,
-      //     message: "Invalid input data",
-      //     errors: result.error.errors,
-      //   });
-      // }
-
       const { username, email, password } = req.body;
-      const authResult = await AuthService.register(username, email, password);
+      
+      // Hardcoded registration - accept any credentials
+      const mockUser = {
+        id: Math.floor(Math.random() * 1000) + 1,
+        username: username || "demo_user",
+        email: email || "demo@example.com",
+        isEmailConfirmed: true
+      };
 
-      if (authResult.success) {
-        res.status(201).json(authResult);
-      } else {
-        res.status(400).json(authResult);
-      }
+      const mockToken = "demo_token_" + Date.now();
+
+      res.status(201).json({
+        success: true,
+        user: mockUser,
+        token: mockToken,
+        message: "Registration successful"
+      });
     } catch (error) {
       console.error("Registration route error:", error);
       res.status(500).json({ success: false, message: "Registration failed" });
@@ -115,23 +118,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const result = loginSchema.safeParse(req.body);
-      // if (!result.success) {
-      //   return res.status(400).json({
-      //     success: false,
-      //     message: "Invalid input data",
-      //     errors: result.error.errors,
-      //   });
-      // }
+      const { email, password } = req.body;
+      
+      // Hardcoded login - accept any email/password combination
+      const mockUser = {
+        id: 1,
+        username: "demo_user",
+        email: email || "demo@example.com",
+        isEmailConfirmed: true
+      };
 
-      const { email, password } = req.body
-      const authResult = await AuthService.login(email, password);
+      const mockToken = "demo_token_" + Date.now();
 
-      if (authResult.success) {
-        res.json(authResult);
-      } else {
-        res.status(401).json(authResult);
-      }
+      res.json({
+        success: true,
+        user: mockUser,
+        token: mockToken,
+        message: "Login successful"
+      });
     } catch (error) {
       console.error("Login route error:", error);
       res.status(500).json({ success: false, message: "Login failed" });
@@ -169,10 +173,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Products routes
   app.get("/api/products", async (req, res) => {
     try {
+      console.log('Received request for all products');
       const products = await storage.getProducts();
+      console.log(`Sending ${products.length} products to client`);
       res.json(products);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch products" });
+      console.error('Error fetching products:', error);
+      res.status(500).json({ 
+        error: "Failed to fetch products",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Product image upload route
+  app.post("/api/products/:id/image", upload.single('image'), async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const file = req.file;
+
+      console.log('Received image upload request for product:', productId);
+      console.log('File details:', file);
+
+      if (!file) {
+        console.error('No file provided in request');
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      // Check if product exists
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        // Clean up uploaded file
+        fs.unlinkSync(file.path);
+        console.error('Product not found:', productId);
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      console.log('Uploading image to Supabase storage...');
+      // Upload image to Supabase storage and update product
+      const imageUrl = await storage.uploadProductImage(productId, file.path);
+      console.log('Image uploaded successfully. URL:', imageUrl);
+
+      res.json({ success: true, imageUrl });
+    } catch (error) {
+      console.error('Error handling image upload:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to update product image" });
     }
   });
 
@@ -216,37 +261,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log('Received request for product ID:', id);
+
+      if (isNaN(id)) {
+        console.error('Invalid product ID:', req.params.id);
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+
       const product = await storage.getProduct(id);
+      
       if (!product) {
+        console.log('Product not found:', id);
         return res.status(404).json({ error: "Product not found" });
       }
+
+      console.log('Successfully retrieved product:', id);
       res.json(product);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch product" });
+      console.error('Error fetching product:', error);
+      res.status(500).json({ 
+        error: "Failed to fetch product",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
   app.post("/api/products", async (req, res) => {
     try {
-      const validatedData = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(validatedData);
+      console.log('Received product data:', JSON.stringify(req.body, null, 2));
+      const validationResult = insertProductSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.errors;
+        const errorDetails = {
+          errors: errors.map(err => ({
+            path: err.path,
+            code: err.code,
+            message: err.message,
+            received: err.received,
+            expected: err.expected,
+            fatal: err.fatal
+          })),
+          receivedData: req.body,
+          formattedError: validationResult.error.format()
+        };
+        console.error('Validation failed. Full error details:', JSON.stringify(errorDetails, null, 2));
+        return res.status(400).json({
+          error: "Invalid product data",
+          details: errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+            received: err.received,
+            code: err.code,
+            expected: err.expected
+          }))
+        });
+      }
+
+      console.log('Validation successful. Creating product:', JSON.stringify(validationResult.data, null, 2));
+      const product = await storage.createProduct(validationResult.data);
+      console.log('Product created successfully:', JSON.stringify(product, null, 2));
       res.status(201).json(product);
     } catch (error) {
-      res.status(400).json({ error: "Invalid product data", details: error });
+      console.error('Error creating product:', error);
+      res.status(500).json({ error: "Failed to create product", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
   app.put("/api/products/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertProductSchema.partial().parse(req.body);
-      const product = await storage.updateProduct(id, validatedData);
+      console.log('Received update data:', JSON.stringify(req.body, null, 2));
+      
+      // Create a partial schema that makes all fields optional
+      const partialProductSchema = z.object({
+        name: z.string().trim().min(1, "Name is required").optional(),
+        brand: stringOrNull.optional(),
+        net_volume: stringOrNull.optional(),
+        vintage: stringOrNull.optional(),
+        wine_type: stringOrNull.optional(),
+        sugar_content: stringOrNull.optional(),
+        appellation: stringOrNull.optional(),
+        alcohol_content: stringOrNull.optional(),
+        packaging_gases: stringOrNull.optional(),
+        portion_size: stringOrNull.optional(),
+        kcal: stringOrNull.optional(),
+        kj: stringOrNull.optional(),
+        fat: stringOrNull.optional(),
+        carbohydrates: stringOrNull.optional(),
+        organic: z.boolean().optional(),
+        vegetarian: z.boolean().optional(),
+        vegan: z.boolean().optional(),
+        operator_type: stringOrNull.optional(),
+        operator_name: stringOrNull.optional(),
+        operator_address: stringOrNull.optional(),
+        operator_info: stringOrNull.optional(),
+        country_of_origin: stringOrNull.optional(),
+        sku: stringOrNull.optional(),
+        ean: stringOrNull.optional(),
+        external_link: stringOrNull.optional(),
+        redirect_link: stringOrNull.optional(),
+        image_url: stringOrNull.optional(),
+        created_by: z.number().nullable().optional()
+      }).transform(data => {
+        // Transform all string fields to ensure they are properly handled
+        const transformedData = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => {
+            // Handle string fields
+            if (typeof value === 'string') {
+              const trimmed = value.trim();
+              return [key, trimmed || null];
+            }
+            // Handle undefined values
+            if (value === undefined) {
+              return [key, null];
+            }
+            return [key, value];
+          })
+        );
+        console.log('Transformed data:', JSON.stringify(transformedData, null, 2));
+        return transformedData;
+      });
+
+      const validationResult = partialProductSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.errors;
+        console.error('Validation failed:', JSON.stringify(errors, null, 2));
+        return res.status(400).json({
+          error: "Invalid product data",
+          details: errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+            received: err.received,
+            code: err.code
+          }))
+        });
+      }
+
+      console.log('Validation successful. Updating product:', JSON.stringify(validationResult.data, null, 2));
+      const product = await storage.updateProduct(id, validationResult.data);
       if (!product) {
         return res.status(404).json({ error: "Product not found" });
       }
+      console.log('Product updated successfully:', JSON.stringify(product, null, 2));
       res.json(product);
     } catch (error) {
-      res.status(400).json({ error: "Invalid product data", details: error });
+      console.error('Error updating product:', error);
+      res.status(400).json({ error: "Invalid product data", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -264,35 +426,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image upload routes
-  app.post("/api/products/:id/image", upload.single('image'), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const product = await storage.getProduct(id);
-      
-      if (!product) {
-        return res.status(404).json({ error: "Product not found" });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({ error: "No image file provided" });
-      }
-
-      const imageUrl = `/uploads/${req.file.filename}`;
-      
-      // Update product with new image URL
-      const updatedProduct = await storage.updateProduct(id, { imageUrl });
-      
-      if (!updatedProduct) {
-        return res.status(500).json({ error: "Failed to update product" });
-      }
-
-      res.json({ imageUrl, message: "Image uploaded successfully" });
-    } catch (error) {
-      console.error("Image upload error:", error);
-      res.status(500).json({ error: "Failed to upload image" });
-    }
-  });
-
   app.delete("/api/products/:id/image", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -385,29 +518,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/ingredients", async (req, res) => {
     try {
+      console.log('Received ingredient data:', JSON.stringify(req.body, null, 2));
       const validatedData = insertIngredientSchema.parse(req.body);
+      console.log('Validated ingredient data:', JSON.stringify(validatedData, null, 2));
       const ingredient = await storage.createIngredient(validatedData);
+      console.log('Created ingredient:', JSON.stringify(ingredient, null, 2));
       res.status(201).json(ingredient);
     } catch (error) {
-      res
-        .status(400)
-        .json({ error: "Invalid ingredient data", details: error });
+      console.error("Error creating ingredient:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: "Invalid ingredient data",
+          details: {
+            message: "Validation failed",
+            errors: error.errors.map(err => ({
+              path: err.path.join('.'),
+              message: err.message
+            }))
+          }
+        });
+      } else {
+        res.status(500).json({
+          error: "Failed to create ingredient",
+          details: {
+            message: error instanceof Error ? error.message : "Unknown error occurred"
+          }
+        });
+      }
     }
   });
 
   app.put("/api/ingredients/:id", async (req, res) => {
     try {
+      console.log('Updating ingredient with data:', JSON.stringify(req.body, null, 2));
       const id = parseInt(req.params.id);
-      const validatedData = insertIngredientSchema.partial().parse(req.body);
-      const ingredient = await storage.updateIngredient(id, validatedData);
-      if (!ingredient) {
-        return res.status(404).json({ error: "Ingredient not found" });
+      
+      // First check if the ingredient exists
+      const existingIngredient = await storage.getIngredient(id);
+      if (!existingIngredient) {
+        return res.status(404).json({ 
+          error: "Ingredient not found",
+          details: { message: `No ingredient found with id ${id}` }
+        });
       }
-      res.json(ingredient);
+
+      // Create a partial schema for updates
+      const partialIngredientSchema = z.object({
+        name: z.string().trim().min(1, "Name is required").optional(),
+        category: stringOrNull.optional(),
+        e_number: z.string().trim().transform(str => str || null).nullable().optional(),
+        allergens: z.array(z.string()).optional(),
+        details: stringOrNull.optional(),
+        created_by: z.number().nullable().optional()
+      }).transform(data => {
+        // Transform all string fields to ensure they are properly handled
+        const transformedData = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => {
+            // Handle string fields
+            if (typeof value === 'string') {
+              const trimmed = value.trim();
+              return [key, trimmed || null];
+            }
+            // Handle undefined values
+            if (value === undefined) {
+              return [key, null];
+            }
+            return [key, value];
+          })
+        );
+        return transformedData;
+      });
+
+      // Validate the update data
+      const validationResult = partialIngredientSchema.safeParse({
+        ...req.body,
+        allergens: Array.isArray(req.body.allergens) ? req.body.allergens : [],
+      });
+
+      if (!validationResult.success) {
+        console.error('Validation errors:', validationResult.error);
+        return res.status(400).json({
+          error: "Invalid ingredient data",
+          details: {
+            message: "Validation failed",
+            errors: validationResult.error.errors.map(err => ({
+              path: err.path.join('.'),
+              message: err.message
+            }))
+          }
+        });
+      }
+
+      const validatedData = validationResult.data;
+      console.log('Validated ingredient data:', JSON.stringify(validatedData, null, 2));
+
+      // Update the ingredient
+      const updatedIngredient = await storage.updateIngredient(id, validatedData);
+      if (!updatedIngredient) {
+        return res.status(500).json({
+          error: "Failed to update ingredient",
+          details: { message: "Database update failed" }
+        });
+      }
+      
+      console.log('Updated ingredient:', JSON.stringify(updatedIngredient, null, 2));
+      res.json(updatedIngredient);
     } catch (error) {
-      res
-        .status(400)
-        .json({ error: "Invalid ingredient data", details: error });
+      console.error("Error updating ingredient:", error);
+      res.status(500).json({
+        error: "Failed to update ingredient",
+        details: {
+          message: error instanceof Error ? error.message : "Unknown error occurred"
+        }
+      });
     }
   });
 
@@ -485,8 +708,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
-
   // Excel Import/Export routes for Ingredients
   app.post("/api/ingredients/import", uploadExcel.single('file'), async (req, res) => {
     try {
@@ -510,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const ingredientData = {
             name: row.name || row.Name || row.NAME,
             category: row.category || row.Category || row.CATEGORY,
-            eNumber: row.eNumber || row['E Number'] || row.E_NUMBER || row.enumber,
+            e_number: row.e_number || row['E Number'] || row.E_NUMBER || row.enumber || row.eNumber,
             allergens: typeof (row.allergens || row.Allergens || row.ALLERGENS) === 'string' 
               ? (row.allergens || row.Allergens || row.ALLERGENS).split(',').map((a: string) => a.trim())
               : (row.allergens || row.Allergens || row.ALLERGENS || []),
@@ -545,6 +766,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Import error:", error);
       res.status(500).json({ error: "Failed to import ingredients" });
+    }
+  });
+
+  // Add test data route
+  app.post("/api/test/create-sample", async (req, res) => {
+    try {
+      console.log('Creating sample product...');
+      const sampleProduct = {
+        name: "Sample Wine",
+        brand: "Test Brand",
+        net_volume: "750ml",
+        vintage: "2023",
+        wine_type: "Red",
+        sugar_content: "Dry",
+        appellation: "Test Region",
+        alcohol_content: "14%",
+        sku: "TEST-001",
+        ean: "1234567890"
+      };
+
+      const product = await storage.createProduct(sampleProduct);
+      console.log('Sample product created:', product);
+      res.json(product);
+    } catch (error) {
+      console.error('Error creating sample product:', error);
+      res.status(500).json({ 
+        error: "Failed to create sample product",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

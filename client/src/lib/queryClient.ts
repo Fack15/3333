@@ -1,5 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const API_BASE_URL = 'http://localhost:3001';
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -7,29 +9,36 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  url: string,
-  options?: {
-    method?: string;
-    data?: unknown;
-  },
-): Promise<any> {
-  const { method = "GET", data } = options || {};
+export async function apiRequest(path: string, options: RequestOptions = {}) {
+  const { method = 'GET', data } = options;
   
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+  console.log(`Making ${method} request to ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: data ? JSON.stringify(data) : undefined,
+    });
 
-  await throwIfResNotOk(res);
-  
-  if (method === "DELETE") {
-    return null;
+    console.log(`Response status:`, response.status);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('API request failed:', errorData);
+      throw new Error(JSON.stringify(errorData));
+    }
+
+    const result = await response.json();
+    console.log(`Request to ${url} successful:`, result);
+    return result;
+  } catch (error) {
+    console.error(`API request to ${url} failed:`, error);
+    throw error;
   }
-  
-  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

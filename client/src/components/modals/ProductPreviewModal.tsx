@@ -41,7 +41,7 @@ export default function ProductPreviewModal({ product, isOpen, onClose }: Produc
             </div>
             <div>
               <h3 className="font-semibold mb-2">Net Volume</h3>
-              <p className="text-gray-600">{product.netVolume || 'Not specified'}</p>
+              <p className="text-gray-600">{product.net_volume || 'Not specified'}</p>
             </div>
             <div>
               <h3 className="font-semibold mb-2">Vintage</h3>
@@ -49,7 +49,7 @@ export default function ProductPreviewModal({ product, isOpen, onClose }: Produc
             </div>
             <div>
               <h3 className="font-semibold mb-2">Wine Type</h3>
-              <p className="text-gray-600">{product.wineType || 'Not specified'}</p>
+              <p className="text-gray-600">{product.wine_type || 'Not specified'}</p>
             </div>
           </div>
 
@@ -76,15 +76,15 @@ export default function ProductPreviewModal({ product, isOpen, onClose }: Produc
               </div>
               <div>
                 <h4 className="font-medium mb-2">Sugar Content</h4>
-                <p className="text-sm text-gray-600">{product.sugarContent || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.sugar_content || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Alcohol Content</h4>
-                <p className="text-sm text-gray-600">{product.alcoholContent || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.alcohol_content || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Portion Size</h4>
-                <p className="text-sm text-gray-600">{product.portionSize || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.portion_size || 'Not specified'}</p>
               </div>
             </div>
           </div>
@@ -112,19 +112,19 @@ export default function ProductPreviewModal({ product, isOpen, onClose }: Produc
             <div className="space-y-2">
               <div>
                 <h4 className="font-medium">Operator Type</h4>
-                <p className="text-sm text-gray-600">{product.operatorType || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.operator_type || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="font-medium">Operator Name</h4>
-                <p className="text-sm text-gray-600">{product.operatorName || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.operator_name || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="font-medium">Address</h4>
-                <p className="text-sm text-gray-600">{product.operatorAddress || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.operator_address || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="font-medium">Additional Info</h4>
-                <p className="text-sm text-gray-600">{product.operatorInfo || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.operator_info || 'Not specified'}</p>
               </div>
             </div>
           </div>
@@ -137,7 +137,7 @@ export default function ProductPreviewModal({ product, isOpen, onClose }: Produc
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium mb-2">Country of Origin</h4>
-                <p className="text-sm text-gray-600">{product.countryOfOrigin || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.country_of_origin || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Appellation</h4>
@@ -153,7 +153,7 @@ export default function ProductPreviewModal({ product, isOpen, onClose }: Produc
               </div>
               <div>
                 <h4 className="font-medium mb-2">Packaging Gases</h4>
-                <p className="text-sm text-gray-600">{product.packagingGases || 'Not specified'}</p>
+                <p className="text-sm text-gray-600">{product.packaging_gases || 'Not specified'}</p>
               </div>
             </div>
           </div>

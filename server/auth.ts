@@ -2,9 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import { storage, db } from './storage';
-import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { storage } from './storage';
 import type { User } from '@shared/schema';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -150,15 +148,11 @@ export class AuthService {
   static async confirmEmail(token: string): Promise<AuthResponse> {
     try {
       // Find user by confirmation token
-      const usersList = await db.select().from(users).where(
-        eq(users.emailConfirmationToken, token)
-      );
+      const user = await storage.getUserByConfirmationToken(token);
       
-      if (usersList.length === 0) {
+      if (!user) {
         return { success: false, message: 'Invalid confirmation token' };
       }
-
-      const user = usersList[0];
 
       // Check if token is expired
       if (user.emailConfirmationTokenExpiry && user.emailConfirmationTokenExpiry < new Date()) {

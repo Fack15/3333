@@ -1,9 +1,9 @@
-
 import { useLocation } from 'wouter';
 import ProductForm from '@/components/forms/ProductForm';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import type { InsertProduct } from '@shared/schema';
 
 export default function CreateProductPage() {
   const [, setLocation] = useLocation();
@@ -11,7 +11,7 @@ export default function CreateProductPage() {
   const queryClient = useQueryClient();
 
   const createProductMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/products', { method: 'POST', data }),
+    mutationFn: (data: InsertProduct) => apiRequest('/api/products', { method: 'POST', data }),
     onSuccess: (newProduct) => {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       toast({
@@ -20,17 +20,36 @@ export default function CreateProductPage() {
       });
       setLocation('/products');
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Product creation error:', error);
+      let errorMessage = "Please try again.";
+      if (error?.message) {
+        try {
+          const parsed = JSON.parse(error.message.split(': ')[1]);
+          if (parsed.details) {
+            errorMessage = parsed.details.map((err: any) => 
+              `${err.field}: ${err.message}`
+            ).join('\n');
+          }
+        } catch (e) {
+          errorMessage = error.message;
+        }
+      }
       toast({
         title: "Error creating product",
-        description: "Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
-  const handleSubmit = async (data: any) => {
-    createProductMutation.mutate(data);
+  const handleSubmit = async (data: InsertProduct) => {
+    // Clean up the data by removing undefined values
+    const cleanData = Object.fromEntries(
+      Object.entries(data).filter(([_, value]) => value !== undefined)
+    ) as InsertProduct;
+    
+    createProductMutation.mutate(cleanData);
   };
 
   const handleCancel = () => {

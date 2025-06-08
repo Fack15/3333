@@ -48,7 +48,7 @@ export default function IngredientsPage() {
       const duplicateData = {
         name: `${ingredient.name} (Copy)`,
         category: ingredient.category,
-        eNumber: ingredient.eNumber,
+        e_number: ingredient.e_number,
         allergens: ingredient.allergens,
         details: ingredient.details,
       };
@@ -127,15 +127,18 @@ export default function IngredientsPage() {
   const filteredIngredients = ingredients.filter(ingredient =>
     ingredient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ingredient.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ingredient.eNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+    ingredient.e_number?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleEdit = (ingredient: Ingredient) => {
+    console.log('Navigating to edit page for ingredient:', ingredient);
     setLocation(`/ingredients/${ingredient.id}/edit`);
   };
 
   const handleDelete = (ingredient: Ingredient) => {
-    deleteIngredientMutation.mutate(ingredient.id);
+    if (confirm(`Are you sure you want to delete ${ingredient.name}?`)) {
+      deleteIngredientMutation.mutate(ingredient.id);
+    }
   };
 
   const handleDuplicate = (ingredient: Ingredient) => {

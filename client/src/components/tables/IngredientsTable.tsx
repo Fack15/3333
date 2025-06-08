@@ -1,4 +1,4 @@
-import { Edit, MoreVertical, Copy, Trash2, FileText } from 'lucide-react';
+import { Edit, MoreVertical, Copy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -13,6 +13,13 @@ interface IngredientsTableProps {
 }
 
 export default function IngredientsTable({ ingredients, onEdit, onDelete, onDuplicate }: IngredientsTableProps) {
+  const handleEdit = (ingredient: Ingredient) => {
+    console.log('Table edit clicked:', ingredient);
+    if (onEdit) {
+      onEdit(ingredient);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <Table>
@@ -32,7 +39,7 @@ export default function IngredientsTable({ ingredients, onEdit, onDelete, onDupl
                 <div className="font-medium text-gray-900">{ingredient.name}</div>
               </TableCell>
               <TableCell className="px-6 py-4 text-gray-600">{ingredient.category || '-'}</TableCell>
-              <TableCell className="px-6 py-4 text-gray-600">{ingredient.eNumber || '-'}</TableCell>
+              <TableCell className="px-6 py-4 text-gray-600">{ingredient.e_number || '-'}</TableCell>
               <TableCell className="px-6 py-4">
                 {ingredient.allergens && ingredient.allergens.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
@@ -51,7 +58,7 @@ export default function IngredientsTable({ ingredients, onEdit, onDelete, onDupl
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onEdit?.(ingredient)}
+                    onClick={() => handleEdit(ingredient)}
                     className="text-gray-600 hover:text-primary p-1"
                   >
                     <Edit className="w-4 h-4" />
@@ -67,7 +74,7 @@ export default function IngredientsTable({ ingredients, onEdit, onDelete, onDupl
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => onEdit?.(ingredient)}>
+                      <DropdownMenuItem onClick={() => handleEdit(ingredient)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </DropdownMenuItem>

@@ -12,8 +12,8 @@ import { wineTypeOptions, operatorTypeOptions } from '@/lib/mock-data';
 import { insertProductSchema } from '@shared/schema';
 import type { Product } from '@shared/schema';
 
-const productFormSchema = insertProductSchema;
-type ProductFormData = z.infer<typeof productFormSchema>;
+// Use the schema directly since we've already defined it properly in shared/schema.ts
+type ProductFormData = z.infer<typeof insertProductSchema>;
 
 interface ProductFormProps {
   product?: Product;
@@ -22,49 +22,94 @@ interface ProductFormProps {
   isLoading?: boolean;
 }
 
+// Helper function to transform empty string to null
+const transformEmptyToNull = (value: string | null | undefined): string | null => {
+  if (value === undefined || value === null || value.trim() === '') return null;
+  return value.trim();
+};
+
+// Helper function to transform string to integer or null
+const transformToIntegerOrNull = (value: string | number | null | undefined): number | null => {
+  if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) return null;
+  const num = typeof value === 'number' ? value : parseInt(String(value), 10);
+  return isNaN(num) ? null : num;
+};
+
 export default function ProductForm({ product, onSubmit, onCancel, isLoading = false }: ProductFormProps) {
   const form = useForm<ProductFormData>({
-    resolver: zodResolver(productFormSchema),
-    defaultValues: product ? {
-      name: product.name,
-      brand: product.brand || undefined,
-      netVolume: product.netVolume || undefined,
-      vintage: product.vintage || undefined,
-      wineType: product.wineType || undefined,
-      sugarContent: product.sugarContent || undefined,
-      appellation: product.appellation || undefined,
-      alcoholContent: product.alcoholContent || undefined,
-      countryOfOrigin: product.countryOfOrigin || undefined,
-      sku: product.sku || undefined,
-      ean: product.ean || undefined,
-      packagingGases: product.packagingGases || undefined,
-      portionSize: product.portionSize || undefined,
-      kcal: product.kcal || undefined,
-      kj: product.kj || undefined,
-      fat: product.fat || undefined,
-      carbohydrates: product.carbohydrates || undefined,
-      organic: product.organic || false,
-      vegetarian: product.vegetarian || false,
-      vegan: product.vegan || false,
-      operatorType: product.operatorType || undefined,
-      operatorName: product.operatorName || undefined,
-      operatorAddress: product.operatorAddress || undefined,
-      operatorInfo: product.operatorInfo || undefined,
-      externalLink: product.externalLink || undefined,
-      redirectLink: product.redirectLink || undefined,
-      createdBy: product.createdBy || undefined,
-    } : {
-      name: '',
-      organic: false,
-      vegetarian: false,
-      vegan: false,
-    },
+    resolver: zodResolver(insertProductSchema),
+    defaultValues: {
+      name: product?.name?.trim() || '',
+      brand: transformEmptyToNull(product?.brand) || null,
+      net_volume: transformEmptyToNull(product?.net_volume) || null,
+      vintage: transformEmptyToNull(product?.vintage) || null,
+      wine_type: transformEmptyToNull(product?.wine_type) || null,
+      sugar_content: transformEmptyToNull(product?.sugar_content) || null,
+      appellation: transformEmptyToNull(product?.appellation) || null,
+      alcohol_content: transformEmptyToNull(product?.alcohol_content) || null,
+      country_of_origin: transformEmptyToNull(product?.country_of_origin) || null,
+      sku: transformEmptyToNull(product?.sku) || null,
+      ean: transformEmptyToNull(product?.ean) || null,
+      packaging_gases: transformEmptyToNull(product?.packaging_gases) || null,
+      portion_size: transformEmptyToNull(product?.portion_size) || null,
+      // All fields as strings
+      kcal: product?.kcal || null,
+      kj: product?.kj || null,
+      fat: product?.fat || null,
+      carbohydrates: product?.carbohydrates || null,
+      organic: product?.organic ?? false,
+      vegetarian: product?.vegetarian ?? false,
+      vegan: product?.vegan ?? false,
+      operator_type: transformEmptyToNull(product?.operator_type) || null,
+      operator_name: transformEmptyToNull(product?.operator_name) || null,
+      operator_address: transformEmptyToNull(product?.operator_address) || null,
+      operator_info: transformEmptyToNull(product?.operator_info) || null,
+      external_link: transformEmptyToNull(product?.external_link) || null,
+      redirect_link: transformEmptyToNull(product?.redirect_link) || null,
+      image_url: product?.image_url || null,
+      created_by: product?.created_by || null
+    }
   });
+
+  const handleFormSubmit = (data: ProductFormData) => {
+    // Transform the data to match the schema expectations
+    const transformedData = {
+      ...data,
+      name: data.name.trim(),
+      brand: transformEmptyToNull(data.brand),
+      net_volume: transformEmptyToNull(data.net_volume),
+      vintage: transformEmptyToNull(data.vintage),
+      wine_type: transformEmptyToNull(data.wine_type),
+      sugar_content: transformEmptyToNull(data.sugar_content),
+      appellation: transformEmptyToNull(data.appellation),
+      alcohol_content: transformEmptyToNull(data.alcohol_content),
+      country_of_origin: transformEmptyToNull(data.country_of_origin),
+      sku: transformEmptyToNull(data.sku),
+      ean: transformEmptyToNull(data.ean),
+      packaging_gases: transformEmptyToNull(data.packaging_gases),
+      portion_size: transformEmptyToNull(data.portion_size),
+      operator_type: transformEmptyToNull(data.operator_type),
+      operator_name: transformEmptyToNull(data.operator_name),
+      operator_address: transformEmptyToNull(data.operator_address),
+      operator_info: transformEmptyToNull(data.operator_info),
+      external_link: transformEmptyToNull(data.external_link),
+      redirect_link: transformEmptyToNull(data.redirect_link),
+      organic: data.organic ?? false,
+      vegetarian: data.vegetarian ?? false,
+      vegan: data.vegan ?? false,
+      image_url: data.image_url,
+      created_by: data.created_by
+    };
+
+    // Log the transformed data before submission
+    console.log('Submitting form data:', transformedData);
+    onSubmit(transformedData);
+  };
 
   return (
     <div className="space-y-8">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
           {/* Product Information */}
           <Card>
             <CardHeader>
@@ -100,7 +145,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                 />
                 <FormField
                   control={form.control}
-                  name="netVolume"
+                  name="net_volume"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Net Volume</FormLabel>
@@ -163,7 +208,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                 />
                 <FormField
                   control={form.control}
-                  name="wineType"
+                  name="wine_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Wine Type</FormLabel>
@@ -187,7 +232,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                 />
                 <FormField
                   control={form.control}
-                  name="sugarContent"
+                  name="sugar_content"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sugar Content</FormLabel>
@@ -205,7 +250,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                     <FormItem>
                       <FormLabel>Appellation</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g. Bordeaux AOC" />
+                        <Input {...field} placeholder="e.g. Bordeaux" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -213,7 +258,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                 />
                 <FormField
                   control={form.control}
-                  name="alcoholContent"
+                  name="alcohol_content"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Alcohol Content</FormLabel>
@@ -226,7 +271,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                 />
                 <FormField
                   control={form.control}
-                  name="countryOfOrigin"
+                  name="country_of_origin"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Country of Origin</FormLabel>
@@ -249,7 +294,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
             <CardContent className="space-y-6">
               <FormField
                 control={form.control}
-                name="packagingGases"
+                name="packaging_gases"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Packaging Gases</FormLabel>
@@ -272,7 +317,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="portionSize"
+                  name="portion_size"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Portion Size</FormLabel>
@@ -290,7 +335,13 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                     <FormItem>
                       <FormLabel>Calories (kcal)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g. 85" />
+                        <Input 
+                          {...field} 
+                          type="text" 
+                          placeholder="e.g. 120"
+                          value={field.value || ''}
+                          onChange={e => field.onChange(e.target.value || null)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -303,7 +354,13 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                     <FormItem>
                       <FormLabel>Energy (kJ)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g. 356" />
+                        <Input 
+                          {...field} 
+                          type="text" 
+                          placeholder="e.g. 502"
+                          value={field.value || ''}
+                          onChange={e => field.onChange(e.target.value || null)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -314,9 +371,15 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                   name="fat"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fat</FormLabel>
+                      <FormLabel>Fat (g)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g. 0g" />
+                        <Input 
+                          {...field} 
+                          type="text" 
+                          placeholder="e.g. 5"
+                          value={field.value || ''}
+                          onChange={e => field.onChange(e.target.value || null)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -327,9 +390,15 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                   name="carbohydrates"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Carbohydrates</FormLabel>
+                      <FormLabel>Carbohydrates (g)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g. 2.6g" />
+                        <Input 
+                          {...field} 
+                          type="text" 
+                          placeholder="e.g. 25"
+                          value={field.value || ''}
+                          onChange={e => field.onChange(e.target.value || null)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -410,7 +479,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="operatorType"
+                  name="operator_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Operator Type</FormLabel>
@@ -434,7 +503,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                 />
                 <FormField
                   control={form.control}
-                  name="operatorName"
+                  name="operator_name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Operator Name</FormLabel>
@@ -448,7 +517,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
               </div>
               <FormField
                 control={form.control}
-                name="operatorAddress"
+                name="operator_address"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Operator Address</FormLabel>
@@ -461,7 +530,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
               />
               <FormField
                 control={form.control}
-                name="operatorInfo"
+                name="operator_info"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Additional Operator Information</FormLabel>
@@ -484,7 +553,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="externalLink"
+                  name="external_link"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>External Link</FormLabel>
@@ -497,7 +566,7 @@ export default function ProductForm({ product, onSubmit, onCancel, isLoading = f
                 />
                 <FormField
                   control={form.control}
-                  name="redirectLink"
+                  name="redirect_link"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Redirect Link</FormLabel>
